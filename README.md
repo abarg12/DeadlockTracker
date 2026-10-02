@@ -50,3 +50,15 @@ sudo apt update
 sudo apt install postgresql
 sudo systemctl start postgresql
 ```
+
+### Troubleshooting
+
+**`role "<your_username>" does not exist`** (Linux)
+
+Postgres on Linux only creates the `postgres` admin role by default. Either
+prefix commands with `sudo -u postgres`, or create a role for yourself once:
+
+```bash
+sudo -u postgres createuser --superuser $USER
+sudo -u postgres createdb $USER
+```
