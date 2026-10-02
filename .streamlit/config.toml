@@ -1,0 +1,11 @@
+[theme]
+base = "dark"
+primaryColor = "#FF4B4B"
+
+[server]
+port = 8501
+runOnSave = true
+maxUploadSize = 200 # MB
+
+[client]
+toolbarMode = "minimal"
