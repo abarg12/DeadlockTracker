@@ -21,14 +21,14 @@ cp .streamlit/secrets.toml.example .streamlit/secrets.toml
 ```
 
 # create the database tables (requires Postgres installed and running)
-# see the end of this doc for instructions on PostgreSQL install and running
+<sub> see the end of this doc for instructions on PostgreSQL install and running </sub>
 ```bash
 createdb my_database
 psql -d my_database -f sql/schema.sql
 ```
 
 # run the app
-### by default the app is hosted at localhost:8501
+<sub> by default the app is hosted at localhost:8501 </sub>
 ```bash
 streamlit run app.py
 ```
