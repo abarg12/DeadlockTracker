@@ -2,8 +2,8 @@
 
 # clone the repo
 ```bash
-git clone https://github.com/your_username/my_app.git
-cd my_app
+git clone https://github.com/abarg12/DeadlockTracker.git
+cd DeadlockTracker
 ```
 
 # start up a python virtual environment
