@@ -17,17 +17,34 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-# create your own secrets file and fill in real credentials
-```bash
-cp .streamlit/secrets.toml.example .streamlit/secrets.toml
-```
-
 # create the database tables (requires Postgres installed and running)
 <sub> see the end of this doc for instructions on PostgreSQL install and running </sub>
 ```bash
 createdb my_database
 psql -d my_database -f sql/schema.sql
 ```
+
+# create your own secrets file and fill in real credentials
+```bash
+cp .streamlit/secrets.toml.example .streamlit/secrets.toml
+```
+
+## the app connects to Postgres over TCP, which requires a password, so set one for your Postgres role if it doesn't have one yet (you'll be prompted to type it):
+```bash
+psql -d postgres -c '\password'
+```
+
+Then edit `.streamlit/secrets.toml` with your own values:
+
+| Key | Value | How to find it |
+|---|---|---|
+| `host` | `localhost` | Postgres is running on your own machine |
+| `port` | `5432` | The default. Check with `psql -d postgres -c 'SHOW port'` |
+| `database` | `my_database` | The name you passed to `createdb`. List them with `psql -d postgres -c '\l'` |
+| `username` | your Postgres role | Usually your OS username. List roles with `psql -d postgres -c '\du'` |
+| `password` | the password you just set | |
+
+<sub> `.streamlit/secrets.toml` is in `.gitignore`, so your password is never committed </sub>
 
 # run the app
 <sub> by default the app is hosted at localhost:8501 </sub>
@@ -101,3 +118,9 @@ prefix commands with `sudo -u postgres`, or create a role for yourself once:
 sudo -u postgres createuser --superuser $USER
 sudo -u postgres createdb $USER
 ```
+
+**`password authentication failed for user "..."`**
+
+The `username` or `password` in `.streamlit/secrets.toml` doesn't match your
+Postgres role. If the user shown is `your_username`, the file still has the
+placeholder values. See the secrets file step above.
