@@ -1,3 +1,5 @@
+# Running for the first time
+
 # clone the repo
 ```bash
 git clone https://github.com/your_username/my_app.git
@@ -33,7 +35,42 @@ psql -d my_database -f sql/schema.sql
 streamlit run app.py
 ```
 
+---
 
+## Running the App
+<sub>After completing the setup steps above once, this is all you need each time.</sub>
+
+1. Make sure Postgres is running:
+
+   | OS | Command |
+   |---|---|
+   | macOS | `brew services start postgresql@17` |
+   | Ubuntu / Debian | `sudo systemctl start postgresql` |
+   | Windows | Usually starts automatically. If not, start the postgresql service from the Services app. |
+
+2. Activate the virtual environment:
+
+```bash
+   source .venv/bin/activate        # Windows: .venv\Scripts\activate
+```
+
+3. Start the app:
+
+```bash
+   streamlit run app.py
+```
+
+   The app opens at http://localhost:8501. Press `Ctrl+C` in the terminal to stop it.
+
+### After pulling new changes
+
+If `requirements.txt` changed, reinstall dependencies before running:
+
+```bash
+pip install -r requirements.txt
+```
+
+--- 
 
 ## installing and running PostgreSQL instructions
 **macOS (Homebrew)**
@@ -50,6 +87,8 @@ sudo apt update
 sudo apt install postgresql
 sudo systemctl start postgresql
 ```
+
+---
 
 ### Troubleshooting
 
