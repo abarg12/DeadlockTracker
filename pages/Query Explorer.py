@@ -7,8 +7,9 @@ st.header("Query Explorer")
 sql_text = st.text_area(
     "SQL query",
     value=(
-        "SELECT h.name, COUNT(*) AS games, ROUND(AVG(mp.won::int), 3) AS win_rate\n"
-        "FROM match_player mp JOIN hero h USING (hero_id)\n"
+        "SELECT h.name, COUNT(*) AS games,\n"
+        "       ROUND(AVG((mp.team = m.winning_team)::int), 3) AS win_rate\n"
+        "FROM match_player mp JOIN hero h USING (hero_id) JOIN match m USING (match_id)\n"
         "GROUP BY h.name ORDER BY games DESC;"
     ),
     height=150,

@@ -9,13 +9,19 @@ CREATE TABLE IF NOT EXISTS hero (
     complexity   INTEGER
 );
 
+-- item_tier entity holds the soul cost shared by every item in a tier
+-- (kept separate so cost depends only on the tier, not on item_id)
+CREATE TABLE IF NOT EXISTS item_tier (
+    item_tier  INTEGER PRIMARY KEY,
+    cost       INTEGER NOT NULL
+);
+
 -- item entity represents the items that players can buy in game
 CREATE TABLE IF NOT EXISTS item (
     item_id         BIGINT PRIMARY KEY,
     name            VARCHAR(100) NOT NULL,
     item_slot_type  VARCHAR(20),
-    item_tier       INTEGER,
-    cost            INTEGER
+    item_tier       INTEGER REFERENCES item_tier (item_tier)
 );
 
 -- player entity represents the human players in a Deadlock game
@@ -44,8 +50,7 @@ CREATE TABLE IF NOT EXISTS match_player (
     account_id     INTEGER NOT NULL REFERENCES player (account_id),
     hero_id        INTEGER NOT NULL REFERENCES hero (hero_id),
     team           SMALLINT NOT NULL,
-    assigned_lane  INTEGER,
-    won            BOOLEAN NOT NULL,
+    assigned_lane  INTEGER, -- won is derived: team = match.winning_team
     kills          INTEGER NOT NULL DEFAULT 0,
     deaths         INTEGER NOT NULL DEFAULT 0,
     assists        INTEGER NOT NULL DEFAULT 0,
