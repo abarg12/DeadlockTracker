@@ -21,8 +21,10 @@ pip install -r requirements.txt
 <sub> see the end of this doc for instructions on PostgreSQL install and running </sub>
 ```bash
 createdb my_database
-psql -d my_database -f sql/schema.sql
+psql -d my_database -f sql/baseline.sql
+psql -d my_database -f sql/optimized.sql
 ```
+<sub> each file builds its own Postgres schema (`baseline` and `optimized`) with the same table names, so the same query runs against either one after `SET search_path TO baseline;` or `SET search_path TO optimized;` </sub>
 
 # create your own secrets file and fill in real credentials
 ```bash
