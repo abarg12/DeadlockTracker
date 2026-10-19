@@ -1,6 +1,6 @@
 [theme]
 base = "dark"
-primaryColor = "#FF4B4B"
+primaryColor = "#28309f"
 
 [server]
 port = 8501

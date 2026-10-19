@@ -36,6 +36,4 @@ ERD_HTML = f"""<!doctype html>
 </body>
 </html>"""
 
-st.header("Entity-Relationship Diagram")
-
 st.iframe(ERD_HTML, height=400)

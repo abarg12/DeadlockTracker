@@ -2,8 +2,6 @@ import streamlit as st
 
 from db.connection import run_query
 
-st.header("Query Explorer")
-
 sql_text = st.text_area(
     "SQL query",
     value=(

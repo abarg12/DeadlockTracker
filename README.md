@@ -17,14 +17,8 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-# create the database tables (requires Postgres installed and running)
-<sub> see the end of this doc for instructions on PostgreSQL install and running </sub>
-```bash
-createdb my_database
-psql -d my_database -f sql/baseline.sql
-psql -d my_database -f sql/optimized.sql
-```
-<sub> each file builds its own Postgres schema (`baseline` and `optimized`) with the same table names, so the same query runs against either one after `SET search_path TO baseline;` or `SET search_path TO optimized;` </sub>
+# make sure Postgres is installed and running
+<sub> see the end of this doc for instructions on PostgreSQL install and running. The app creates its own database and tables on first launch. </sub>
 
 # create your own secrets file and fill in real credentials
 ```bash
@@ -42,7 +36,7 @@ Then edit `.streamlit/secrets.toml` with your own values:
 |---|---|---|
 | `host` | `localhost` | Postgres is running on your own machine |
 | `port` | `5432` | The default. Check with `psql -d postgres -c 'SHOW port'` |
-| `database` | `my_database` | The name you passed to `createdb`. List them with `psql -d postgres -c '\l'` |
+| `database` | any name, e.g. `deadlock` | The app creates this database on first launch if it doesn't exist |
 | `username` | your Postgres role | Usually your OS username. List roles with `psql -d postgres -c '\du'` |
 | `password` | the password you just set | |
 
@@ -53,6 +47,32 @@ Then edit `.streamlit/secrets.toml` with your own values:
 ```bash
 streamlit run app.py
 ```
+
+While the app is running it keeps its own data current, with no manual loading:
+
+- **First launch:** it creates the database and tables, then loads a sample of the past week's matches from the Deadlock API's public data lake. This takes about 7 minutes (about 1 GB is read, but only the sample is stored). The pages are usable within a minute: they load the newest days first, show a progress bar, and update on their own as data arrives.
+- **Every 15 minutes:** it adds the sampled matches from the data lake's newest hourly files, then drops data older than a week, so storage stays around 600 MB.
+- **After time off:** the next launch catches up from where it left off, or reloads the past week if it was off for more than a couple of days.
+
+Optional settings go in `.streamlit/secrets.toml`:
+
+```toml
+[ingest]
+sample_percent = 3      # share of public matches to keep (3% is about 19,000 matches and 600 MB per week)
+keep_days = 7           # rolling window
+interval_minutes = 15   # how often to check for new data
+```
+
+To ingest without the app running (for example from cron), use `python -m ingest.live --once`.
+
+The pages run the same SQL files in `sql/queries/` that the experiments measure:
+
+| Page | Query |
+|---|---|
+| Overview | `daily_summary.sql` (matches per day and average duration) |
+| Heroes | `hero_win_rates_mv.sql` (reads the `hero_daily_stats` materialized view) |
+| Items | `item_win_rates_mv.sql` (reads the `item_daily_stats` materialized view) |
+| Player history | `player_match_history.sql` (a player's 20 most recent matches) |
 
 ---
 
@@ -81,13 +101,52 @@ streamlit run app.py
 
    The app opens at http://localhost:8501. Press `Ctrl+C` in the terminal to stop it.
 
-### After pulling new changes
 
-If `requirements.txt` changed, reinstall dependencies before running:
+---
+
+## Running the experiments (ablation study)
+<sub>Measures query latency for each optimization on its own and combined, at several dataset sizes.</sub>
+
+1. Create a separate database, so the benchmark doesn't wipe the app's data. It rebuilds both schemas at the start of every run:
 
 ```bash
-pip install -r requirements.txt
+createdb deadlock_bench
 ```
+
+2. Download a week of matches once. Every configuration and dataset size then uses exactly the same data:
+
+```bash
+python -m ingest.fetch --matches 50000 --days 7
+```
+
+3. Run the study:
+
+```bash
+python -m bench.run --database deadlock_bench --sizes 10000,25000,50000 --repeats 5
+```
+
+   For each size, it loads the same matches into both schemas and runs every query in `sql/queries/` under five configurations:
+
+   | Config | Schema | Indexes | Materialized views |
+   |---|---|---|---|
+   | `baseline` | baseline | | |
+   | `baseline+indexes` | baseline | ✓ | |
+   | `partitioned` | optimized | | |
+   | `partitioned+indexes` | optimized | ✓ | |
+   | `full` | optimized | ✓ | ✓ (runs the `*_mv` queries) |
+
+   Each query gets one unrecorded warm-up run, then `--repeats` runs of `EXPLAIN (ANALYZE, BUFFERS)`. Smaller datasets are subsets of larger ones.
+
+4. Read the results in `results/<timestamp>/`:
+
+   | File | Contents |
+   |---|---|
+   | `latency.csv` | one row per measured run: execution and planning time, buffer hits/reads, temp (disk spill) blocks, slowest plan node |
+   | `setup.csv` | load, index build and view build times, and disk size per config |
+   | `correctness.csv` | whether every configuration returned identical rows, and each `*_mv` query matched its raw version |
+   | `plans/` | every query plan as JSON, for per-node bottleneck analysis |
+   | `metadata.json` | PostgreSQL version and settings, query parameters, git commit |
+
 
 --- 
 
