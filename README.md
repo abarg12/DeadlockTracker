@@ -18,14 +18,14 @@ pip install -r requirements.txt
 ```
 
 # make sure Postgres is installed and running
-<sub> see the end of this doc for instructions on PostgreSQL install and running. The app creates its own database and tables on first launch. </sub>
+<sub> see the [PostgreSQL install and running instructions](#installing-and-running-postgresql-instructions) at the end of this doc. The app creates its own database and tables on first launch. </sub>
 
 # create your own secrets file and fill in real credentials
 ```bash
 cp .streamlit/secrets.toml.example .streamlit/secrets.toml
 ```
 
-## the app connects to Postgres over TCP, which requires a password, so set one for your Postgres role if it doesn't have one yet (you'll be prompted to type it):
+<sub> the app connects to Postgres over TCP, which requires a password, so set one for your Postgres role if it doesn't have one yet (you'll be prompted to type it):</sub>
 ```bash
 psql -d postgres -c '\password'
 ```
