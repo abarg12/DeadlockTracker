@@ -47,7 +47,7 @@ st.dataframe(
         "net_worth": st.column_config.NumberColumn("Souls", format="localized"),
         "duration_min": st.column_config.NumberColumn("Duration (min)", format="%.1f"),
         "match_mode": "Mode",
-        "match_id": st.column_config.NumberColumn("Match ID", format="plain"),
+        "match_id": st.column_config.NumberColumn("Match ID", format="%d"),
     },
     hide_index=True,
 )
