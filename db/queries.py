@@ -136,3 +136,34 @@ def _most_active_player(version: int) -> int | None:
 def most_active_player() -> int | None:
     """Default account for the player page."""
     return _most_active_player(data_version())
+
+
+@st.cache_data(ttl="10m", max_entries=64)
+def _player_name(account_id: int, version: int) -> str | None:
+    df = run_query("SELECT account_name FROM player WHERE account_id = :id", {"id": account_id})
+    return None if df.empty or pd.isna(df["account_name"].iloc[0]) else df["account_name"].iloc[0]
+
+
+def player_name(account_id: int) -> str | None:
+    """Steam display name for an account, or None if unknown."""
+    return _player_name(int(account_id), data_version())
+
+
+@st.cache_data(ttl="10m", max_entries=64)
+def _search_players(text: str, version: int) -> pd.DataFrame:
+    # escape LIKE wildcards so the search text matches literally
+    pattern = "%" + text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+    return run_query(
+        """SELECT p.account_id, p.account_name, COUNT(*) AS matches
+           FROM player p JOIN match_player mp USING (account_id)
+           WHERE p.account_name ILIKE :pattern
+           GROUP BY p.account_id, p.account_name
+           ORDER BY lower(p.account_name) = lower(:text) DESC, matches DESC, p.account_id
+           LIMIT 20""",
+        {"pattern": pattern, "text": text},
+    )
+
+
+def search_players(text: str) -> pd.DataFrame:
+    """Up to 20 players whose name contains text: exact matches first, then the most active."""
+    return _search_players(text, data_version())

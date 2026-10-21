@@ -7,6 +7,7 @@ import time
 import urllib.error
 import urllib.request
 from collections import Counter
+from pathlib import Path
 
 import duckdb
 
@@ -69,6 +70,24 @@ def manifest() -> dict:
 
 def file_url(lake_manifest: dict, f: dict) -> str:
     return f"{lake_manifest['public_url']}/{f['key']}"
+
+
+def steam_names_file(con, lake_manifest: dict, cache_dir: Path) -> tuple[Path, bool]:
+    """Local parquet of (account_id, personaname) from the current Steam profile snapshot, downloading
+    only those two columns (~50 MB) when the snapshot changes; returns (path, whether it's new)."""
+    f = lake_manifest["tables"]["steam_profiles"]["files"][0]
+    path = cache_dir / f"steam_names-{Path(f['key']).stem}.parquet"
+    if path.exists():
+        return path, False
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    part = path.with_name(path.name + ".part")
+    con.execute(f"""COPY (SELECT account_id, personaname FROM read_parquet('{file_url(lake_manifest, f)}')
+                          WHERE personaname <> '') TO '{part}' (FORMAT parquet)""")
+    part.replace(path)
+    for old in cache_dir.glob("steam_names-*.parquet"):
+        if old != path:
+            old.unlink()
+    return path, True
 
 
 def _row_groups(con, url: str, since: int) -> list[tuple[str, int, int, int]]:

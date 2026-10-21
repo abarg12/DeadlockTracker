@@ -1,20 +1,35 @@
 import streamlit as st
 
-from db.queries import most_active_player, player_match_history
+from db.queries import most_active_player, player_match_history, player_name, search_players
 from ui import require_data
 
 require_data()
 
-account_id = st.number_input(
-    "Account ID",
-    min_value=1,
-    value=most_active_player(),
-    step=1,
-    help="The player's SteamID3. The default is the most active player in the loaded data.",
-    key="account_id",
+query = st.text_input(
+    "Player",
+    placeholder="Name or account ID",
+    help="A Steam display name (or part of one) or a SteamID3. Leave empty for the most active player.",
+    key="player",
     bind="query-params",
-    width=240,
-)
+    width=320,
+).strip()
+
+if not query:
+    account_id = most_active_player()
+else:
+    labels = {r.account_id: f"{r.account_name} · {r.matches} match{'es' if r.matches != 1 else ''} · ID {r.account_id}"
+              for r in search_players(query).itertuples()}
+    # digits can be an account ID or a name like "777", so offer both
+    if query.isdigit() and int(query) not in labels and not player_match_history(int(query)).empty:
+        labels = {int(query): f"Account ID {query}"} | labels
+    if not labels:
+        st.info(f"No player named like “{query}” in the past week's sampled matches.")
+        st.stop()
+    account_id = (next(iter(labels)) if len(labels) == 1 else
+                  st.selectbox("Matching players", list(labels), format_func=labels.get, key="player_pick"))
+
+st.subheader(player_name(account_id) or f"Account {account_id}", anchor=False)
+st.caption(f"Account ID {account_id}")
 
 history = player_match_history(account_id)
 if history.empty:

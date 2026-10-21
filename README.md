@@ -1,31 +1,52 @@
-# Running for the first time
+# Deadlock Tracker
 
-# clone the repo
+A Streamlit dashboard of Deadlock hero, item and player statistics, backed by PostgreSQL and fed automatically from the [Deadlock API](https://api.deadlock-api.com/docs).
+
+- [First-time setup](#first-time-setup)
+- [Running the app](#running-the-app)
+- [Running the benchmarks](#running-the-benchmarks)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## First-time setup
+
+### 1. Install and start PostgreSQL
+
+**macOS (Homebrew)**
+```bash
+brew install postgresql@17
+brew services start postgresql@17
+echo 'export PATH="$(brew --prefix postgresql@17)/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+**Ubuntu / Debian**
+```bash
+sudo apt update
+sudo apt install postgresql
+sudo systemctl start postgresql
+```
+
+<sub> the app creates its own database and tables on first launch, so there's nothing else to set up in Postgres </sub>
+
+### 2. Clone the repo and install dependencies
+
 ```bash
 git clone https://github.com/abarg12/DeadlockTracker.git
 cd DeadlockTracker
-```
-
-# start up a python virtual environment
-```bash
 python3 -m venv .venv
 source .venv/bin/activate
-```
-
-# install dependencies
-```bash
 pip install -r requirements.txt
 ```
 
-# make sure Postgres is installed and running
-<sub> see the [PostgreSQL install and running instructions](#installing-and-running-postgresql-instructions) at the end of this doc. The app creates its own database and tables on first launch. </sub>
+### 3. Create your secrets file
 
-# create your own secrets file and fill in real credentials
 ```bash
 cp .streamlit/secrets.toml.example .streamlit/secrets.toml
 ```
 
-<sub> the app connects to Postgres over TCP, which requires a password, so set one for your Postgres role if it doesn't have one yet (you'll be prompted to type it):</sub>
+The app connects to Postgres over TCP, which requires a password. If your Postgres role doesn't have one yet, set it (you'll be prompted to type it):
 ```bash
 psql -d postgres -c '\password'
 ```
@@ -42,19 +63,41 @@ Then edit `.streamlit/secrets.toml` with your own values:
 
 <sub> `.streamlit/secrets.toml` is in `.gitignore`, so your password is never committed </sub>
 
-# run the app
-<sub> by default the app is hosted at localhost:8501 </sub>
+---
+
+## Running the app
+
+1. Make sure Postgres is running:
+
+   | OS | Command |
+   |---|---|
+   | macOS | `brew services start postgresql@17` |
+   | Ubuntu / Debian | `sudo systemctl start postgresql` |
+   | Windows | Usually starts automatically. If not, start the postgresql service from the Services app. |
+
+2. Activate the virtual environment and start the app:
+
 ```bash
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 streamlit run app.py
 ```
+
+   The app opens at http://localhost:8501. Press `Ctrl+C` in the terminal to stop it.
+
+### How the data stays current
 
 While the app is running it keeps its own data current, with no manual loading:
 
 - **First launch:** it creates the database and tables, then loads a sample of the past week's matches from the Deadlock API's public data lake. This takes about 7 minutes (about 1 GB is read, but only the sample is stored). The pages are usable within a minute: they load the newest days first, show a progress bar, and update on their own as data arrives.
 - **Every 15 minutes:** it adds the sampled matches from the data lake's newest hourly files, then drops data older than a week, so storage stays around 600 MB.
+- **Player names:** Steam display names come from the data lake's daily profile snapshot (only the account ID and name columns, cached in `data/lake_cache/`, about 75 MB), so the Player history page can search by name.
 - **After time off:** the next launch catches up from where it left off, or reloads the past week if it was off for more than a couple of days.
 
-Optional settings go in `.streamlit/secrets.toml`:
+To ingest without the app running (for example from cron), use `python -m ingest.live --once`.
+
+### Optional settings
+
+Add these to `.streamlit/secrets.toml` to change the defaults:
 
 ```toml
 [ingest]
@@ -63,9 +106,9 @@ keep_days = 7           # rolling window
 interval_minutes = 15   # how often to check for new data
 ```
 
-To ingest without the app running (for example from cron), use `python -m ingest.live --once`.
+### Pages and their queries
 
-The pages run the same SQL files in `sql/queries/` that the experiments measure:
+The pages run the same SQL files in `sql/queries/` that the benchmarks measure:
 
 | Page | Query |
 |---|---|
@@ -76,36 +119,9 @@ The pages run the same SQL files in `sql/queries/` that the experiments measure:
 
 ---
 
-## Running the App
-<sub>After completing the setup steps above once, this is all you need each time.</sub>
+## Running the benchmarks
 
-1. Make sure Postgres is running:
-
-   | OS | Command |
-   |---|---|
-   | macOS | `brew services start postgresql@17` |
-   | Ubuntu / Debian | `sudo systemctl start postgresql` |
-   | Windows | Usually starts automatically. If not, start the postgresql service from the Services app. |
-
-2. Activate the virtual environment:
-
-```bash
-   source .venv/bin/activate        # Windows: .venv\Scripts\activate
-```
-
-3. Start the app:
-
-```bash
-   streamlit run app.py
-```
-
-   The app opens at http://localhost:8501. Press `Ctrl+C` in the terminal to stop it.
-
-
----
-
-## Running the experiments (ablation study)
-<sub>Measures query latency for each optimization on its own and combined, at several dataset sizes.</sub>
+The ablation study measures query latency for each optimization on its own and combined, at several dataset sizes.
 
 1. Create a separate database, so the benchmark doesn't wipe the app's data. It rebuilds both schemas at the start of every run:
 
@@ -147,28 +163,9 @@ python -m bench.run --database deadlock_bench --sizes 10000,25000,50000 --repeat
    | `plans/` | every query plan as JSON, for per-node bottleneck analysis |
    | `metadata.json` | PostgreSQL version and settings, query parameters, git commit |
 
-
---- 
-
-## installing and running PostgreSQL instructions
-**macOS (Homebrew)**
-```bash
-brew install postgresql@17
-brew services start postgresql@17
-echo 'export PATH="$(brew --prefix postgresql@17)/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-**Ubuntu / Debian**
-```bash
-sudo apt update
-sudo apt install postgresql
-sudo systemctl start postgresql
-```
-
 ---
 
-### Troubleshooting
+## Troubleshooting
 
 **`role "<your_username>" does not exist`** (Linux)
 
@@ -184,4 +181,4 @@ sudo -u postgres createdb $USER
 
 The `username` or `password` in `.streamlit/secrets.toml` doesn't match your
 Postgres role. If the user shown is `your_username`, the file still has the
-placeholder values. See the secrets file step above.
+placeholder values. See [Create your secrets file](#3-create-your-secrets-file).

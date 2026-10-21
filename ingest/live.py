@@ -11,6 +11,7 @@ import tomllib
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import pandas as pd
 import psycopg2
 from psycopg2 import sql
 from psycopg2.extras import execute_values
@@ -23,6 +24,7 @@ STOP = threading.Event()  # set on app shutdown; checked between units of work
 LOCK_ID = 501  # advisory lock so two app instances never ingest at once
 SCHEMA_VERSION = "deadlock-tracker v2"  # must match the COMMENT ON SCHEMA in sql/optimized.sql
 DEFAULTS = {"sample_percent": 3.0, "keep_days": 7, "interval_minutes": 15}
+NAME_CACHE = ROOT / "data" / "lake_cache"  # local copy of the Steam display names, replaced daily
 
 
 def settings() -> dict:
@@ -135,6 +137,29 @@ def backfill(conn, con, lake_manifest: dict, since: int, cfg: dict, known: tuple
     return added, min((built[c[0]] for c in chunks), default=int(time.time()))
 
 
+def refresh_player_names(conn, con, lake_manifest: dict) -> int:
+    """Fills player.account_name with Steam display names: every player when the profile snapshot
+    changes, otherwise only players not looked up yet (last_updated is NULL). Returns names set."""
+    path, new_snapshot = lake.steam_names_file(con, lake_manifest, NAME_CACHE)
+    with conn.cursor() as cur:
+        cur.execute("SELECT account_id FROM optimized.player" + ("" if new_snapshot else " WHERE last_updated IS NULL"))
+        ids = [r[0] for r in cur.fetchall()]
+        if not ids:
+            return 0
+        con.register("ours", pd.DataFrame({"account_id": ids}))
+        names = con.execute(f"SELECT n.account_id, n.personaname FROM read_parquet('{path}') n "
+                            "JOIN ours USING (account_id)").fetchall()
+        con.unregister("ours")
+        # Postgres text can't hold NUL bytes
+        execute_values(cur, """UPDATE optimized.player p SET account_name = v.name
+                               FROM (VALUES %s) v (account_id, name) WHERE p.account_id = v.account_id""",
+                       [(a, n.replace("\x00", "")[:255]) for a, n in names], page_size=5000)
+        cur.execute("UPDATE optimized.player SET last_updated = now() WHERE account_id = ANY(%s)", (ids,))
+        cur.execute("UPDATE optimized.ingest_state SET data_version = data_version + 1")
+    conn.commit()
+    return len(names)
+
+
 def run_once() -> None:
     """Brings the database up to date with the data lake, then expires data older than keep_days."""
     cfg = settings()
@@ -180,6 +205,14 @@ def run_once() -> None:
                             (f["hi"],))
             conn.commit()
             last_hi = f["hi"]
+
+        try:
+            named = refresh_player_names(conn, con, lake_manifest)
+            if named:
+                log.info("player names: %d set", named)
+        except Exception:
+            conn.rollback()
+            log.warning("player name refresh failed; retrying next run", exc_info=True)
 
         with conn.cursor() as cur:
             cur.execute("SELECT optimized.drop_old_partitions(make_interval(days => %s))", (int(cfg["keep_days"]),))
