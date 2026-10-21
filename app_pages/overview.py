@@ -12,6 +12,8 @@ summary = daily_summary(since)
 summary["avg_duration_min"] = (summary["avg_duration_s"] / 60).round(1)
 total_matches = int(summary["matches"].sum())
 avg_duration_min = (summary["matches"] * summary["avg_duration_min"]).sum() / max(total_matches, 1)
+# a one-point sparkline is drawn as two identical points, so only show trends across several days
+show_trend = len(summary) > 1
 
 with st.container(horizontal=True):
     st.metric(
@@ -19,14 +21,14 @@ with st.container(horizontal=True):
         f"{total_matches:,}",
         help="Matches in the sampled data (a few percent of public matches), not every match played",
         border=True,
-        chart_data=summary["matches"].tolist(),
+        chart_data=summary["matches"].tolist() if show_trend else None,
         chart_type="bar",
     )
     st.metric(
         "Average duration",
         f"{avg_duration_min:.1f} min",
         border=True,
-        chart_data=summary["avg_duration_min"].tolist(),
+        chart_data=summary["avg_duration_min"].tolist() if show_trend else None,
         chart_type="line",
     )
     st.metric("Days covered", len(summary), border=True)

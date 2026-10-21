@@ -29,7 +29,7 @@ with st.container(horizontal=True):
               f"{history['kills'].mean():.1f} / {history['deaths'].mean():.1f} / {history['assists'].mean():.1f}",
               border=True)
     st.metric("Avg souls", f"{history['net_worth'].mean():,.0f}", border=True,
-              chart_data=history["net_worth"].iloc[::-1].tolist(), chart_type="line")
+              chart_data=history["net_worth"].iloc[::-1].tolist() if len(history) > 1 else None, chart_type="line")
 
 history["result"] = history["won"].map({True: "Win", False: "Loss"})
 history["duration_min"] = history["duration_s"] / 60
