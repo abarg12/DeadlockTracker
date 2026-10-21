@@ -36,4 +36,4 @@ ERD_HTML = f"""<!doctype html>
 </body>
 </html>"""
 
-st.iframe(ERD_HTML, height=400)
+st.iframe(ERD_HTML, height=530)
