@@ -2,7 +2,6 @@ import streamlit as st
 
 st.set_page_config(page_title="Deadlock Tracker", layout="wide")
 st.set_option("client.toolbarMode", "viewer")
-# taller top bar (default 3.75rem) with larger section buttons; page padding grows by the same 0.75rem
 st.html("""<style>
 .stAppHeader { height: 1rem; }
 [data-testid="stTopNavSection"] { font-size: 1rem; padding: 0.25rem 1rem; }

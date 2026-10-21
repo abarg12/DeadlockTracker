@@ -4,8 +4,6 @@ from sqlalchemy import text
 
 
 def get_connection():
-    # queries use bare table names; the background ingest fills the optimized schema
-    # SQLAlchemy 2.1+ defaults to psycopg (v3), but requirements.txt installs psycopg2
     return st.connection(
         "postgresql",
         type="sql",
