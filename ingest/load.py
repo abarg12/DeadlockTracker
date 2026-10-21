@@ -1,9 +1,5 @@
-"""Loads ingest.fetch CSVs into a schema; --matches N always picks the same N matches.
+"""Database helpers, and the benchmark loader for ingest.fetch CSVs (N matches always picks the same N)."""
 
-    python -m ingest.load --schema optimized [--matches 10000]
-"""
-
-import argparse
 import gzip
 import time
 import tomllib
@@ -53,6 +49,13 @@ def run_sql_file(conn, path: Path, schema: str | None = None) -> None:
         cur.execute(path.read_text())
 
 
+def query_sql(name: str) -> str:
+    """sql/queries/<name>.sql minus comment lines (their :names would otherwise be bound as parameters).
+    The app and the benchmark both read queries through this, so they run identical SQL."""
+    lines = (ROOT / "sql" / "queries" / f"{name}.sql").read_text().splitlines()
+    return "\n".join(line for line in lines if not line.lstrip().startswith("--"))
+
+
 def stage(conn, raw_dir: Path) -> int:
     """Copies the CSVs in raw_dir into the staging schema; returns the match count."""
     with conn.cursor() as cur:
@@ -100,30 +103,3 @@ def load(conn, schema: str, matches: int | None = None) -> float:
             INSERT INTO match_player_item SELECT mpi.* FROM staging.match_player_item mpi JOIN chosen USING (match_id);
         """)
     return time.perf_counter() - started
-
-
-def load_dataset(conn, schema: str, raw_dir: Path, matches: int | None = None) -> None:
-    """Stages raw_dir, loads it into schema, then cleans up and refreshes the views if present."""
-    print(f"staged {stage(conn, raw_dir)} matches")
-    print(f"loaded {schema} in {load(conn, schema, matches):.1f}s")
-    with conn.cursor() as cur:
-        cur.execute("DROP SCHEMA staging CASCADE")
-        cur.execute(f"VACUUM (ANALYZE) {schema}.match, {schema}.match_player, {schema}.match_player_item")
-        cur.execute(f"SELECT to_regproc('{schema}.refresh_stats') IS NOT NULL")
-        if cur.fetchone()[0]:
-            cur.execute(f"SELECT {schema}.refresh_stats()")
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--schema", choices=["baseline", "optimized"], default="optimized")
-    parser.add_argument("--matches", type=int, help="load only this many matches (default: all)")
-    parser.add_argument("--raw", type=Path, default=Path("data/raw"))
-    parser.add_argument("--database", help="database to load into (default: the one in secrets.toml)")
-    args = parser.parse_args()
-
-    load_dataset(connect(args.database), args.schema, args.raw, args.matches)
-
-
-if __name__ == "__main__":
-    main()

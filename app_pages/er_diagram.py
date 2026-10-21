@@ -1,7 +1,5 @@
 import streamlit as st
 
-from db.connection import run_query
-
 ERD_URL = 'https://dbdiagram.io/e/6ab5ea900f25a52d010271f5/6abead110f25a52d016885fb'
 
 # The diagram is hosted on another site, so Streamlit can't wait for it before

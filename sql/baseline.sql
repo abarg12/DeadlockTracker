@@ -32,7 +32,6 @@ CREATE TABLE item (
 CREATE TABLE player (
     account_id          BIGINT PRIMARY KEY, -- SteamID3 (unsigned 32-bit, can exceed INTEGER)
     account_name        VARCHAR(255),
-    ranked_badge_level  INTEGER CHECK (ranked_badge_level >= 0), -- tier * 10 + subtier, e.g. 86
     last_updated        TIMESTAMPTZ
 );
 

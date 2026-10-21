@@ -22,7 +22,7 @@ from ingest.load import ROOT, connect, read_secrets, run_sql_file
 log = logging.getLogger("deadlock.ingest")
 STOP = threading.Event()  # set on app shutdown; checked between units of work
 LOCK_ID = 501  # advisory lock so two app instances never ingest at once
-SCHEMA_VERSION = "deadlock-tracker v2"  # must match the COMMENT ON SCHEMA in sql/optimized.sql
+SCHEMA_VERSION = "deadlock-tracker v3"  # must match the COMMENT ON SCHEMA in sql/optimized.sql
 DEFAULTS = {"sample_percent": 3.0, "keep_days": 7, "interval_minutes": 15}
 NAME_CACHE = ROOT / "data" / "lake_cache"  # local copy of the Steam display names, replaced daily
 

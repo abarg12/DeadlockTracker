@@ -14,7 +14,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from ingest.load import ROOT, connect, load, run_sql_file, stage
+from ingest.load import ROOT, connect, load, query_sql, run_sql_file, stage
 
 SQL = ROOT / "sql"
 QUERIES = SQL / "queries"
@@ -35,9 +35,7 @@ def load_queries() -> dict[str, str]:
     """Reads sql/queries/*.sql, converting :name parameters to psycopg2's %(name)s."""
     queries = {}
     for path in sorted(QUERIES.glob("*.sql")):
-        # drop comment lines, as the app does, so both run identical SQL
-        lines = [line for line in path.read_text().splitlines() if not line.lstrip().startswith("--")]
-        sql = "\n".join(lines).replace("%", "%%")
+        sql = query_sql(path.stem).replace("%", "%%")
         # skip :: casts and times like 12:30
         queries[path.stem] = re.sub(r"(?<![:\w]):(\w+)", r"%(\1)s", sql)
     return queries

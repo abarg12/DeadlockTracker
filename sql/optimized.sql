@@ -4,7 +4,7 @@
 DROP SCHEMA IF EXISTS optimized CASCADE;
 CREATE SCHEMA optimized;
 -- bump when the layout changes; the app's ingest rebuilds a schema with an older version
-COMMENT ON SCHEMA optimized IS 'deadlock-tracker v2';
+COMMENT ON SCHEMA optimized IS 'deadlock-tracker v3';
 SET search_path TO optimized;
 
 -- hero entity represents the playable characters in Deadlock
@@ -34,7 +34,6 @@ CREATE TABLE item (
 CREATE TABLE player (
     account_id          BIGINT PRIMARY KEY, -- SteamID3 (unsigned 32-bit, can exceed INTEGER)
     account_name        VARCHAR(255),
-    ranked_badge_level  INTEGER CHECK (ranked_badge_level >= 0), -- tier * 10 + subtier, e.g. 86
     last_updated        TIMESTAMPTZ
 );
 

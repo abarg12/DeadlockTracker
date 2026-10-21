@@ -2,24 +2,16 @@
 
 import datetime as dt
 from decimal import Decimal
-from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 
 from db.connection import run_query
-
-QUERY_DIR = Path(__file__).resolve().parent.parent / "sql" / "queries"
-
-
-def load_sql(name: str) -> str:
-    """Reads sql/queries/<name>.sql minus comment lines, whose :names SQLAlchemy would bind."""
-    lines = (QUERY_DIR / f"{name}.sql").read_text().splitlines()
-    return "\n".join(line for line in lines if not line.lstrip().startswith("--"))
+from ingest.load import query_sql
 
 
 def _run(name: str, **params) -> pd.DataFrame:
-    df = run_query(load_sql(name), params)
+    df = run_query(query_sql(name), params)
     # NUMERIC columns arrive as Decimal; charts need floats
     for column in df.columns:
         if df[column].dtype == object and df[column].map(lambda v: isinstance(v, Decimal)).any():
@@ -125,17 +117,6 @@ def _player_match_history(account_id: int, version: int) -> pd.DataFrame:
 
 def player_match_history(account_id: int) -> pd.DataFrame:
     return _player_match_history(int(account_id), data_version())
-
-
-@st.cache_data(ttl="10m", max_entries=4)
-def _most_active_player(version: int) -> int | None:
-    df = run_query("SELECT account_id FROM match_player GROUP BY 1 ORDER BY COUNT(*) DESC, 1 LIMIT 1")
-    return None if df.empty else int(df["account_id"].iloc[0])
-
-
-def most_active_player() -> int | None:
-    """Default account for the player page."""
-    return _most_active_player(data_version())
 
 
 @st.cache_data(ttl="10m", max_entries=64)
