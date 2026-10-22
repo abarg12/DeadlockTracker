@@ -11,12 +11,12 @@ SELECT
 FROM (
     SELECT
         hero_id,
-        SUM(games)                                    AS games,
-        SUM(wins)                                     AS wins,
-        ROUND(SUM(wins)::NUMERIC / SUM(games), 4)     AS win_rate,
-        ROUND(SUM(kills)::NUMERIC / SUM(games), 2)    AS avg_kills,
-        ROUND(SUM(deaths)::NUMERIC / SUM(games), 2)   AS avg_deaths,
-        ROUND(SUM(assists)::NUMERIC / SUM(games), 2)  AS avg_assists
+        SUM(games) AS games,
+        SUM(wins) AS wins,
+        ROUND(SUM(wins)::NUMERIC / SUM(games), 4) AS win_rate,
+        ROUND(SUM(kills)::NUMERIC / SUM(games), 2) AS avg_kills,
+        ROUND(SUM(deaths)::NUMERIC / SUM(games), 2) AS avg_deaths,
+        ROUND(SUM(assists)::NUMERIC / SUM(games), 2) AS avg_assists
     FROM hero_daily_stats
     WHERE match_date >= (CAST(:since AS TIMESTAMPTZ) AT TIME ZONE 'UTC')::DATE
       AND match_mode = :match_mode

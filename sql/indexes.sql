@@ -1,5 +1,4 @@
--- B-tree indexes for whichever schema search_path points at.
--- The primary keys already cover the foreign key joins.
+-- B-tree indexes
 
 -- date filters and first_match_id()
 CREATE INDEX IF NOT EXISTS match_start_time_idx ON match (start_time) INCLUDE (match_id);

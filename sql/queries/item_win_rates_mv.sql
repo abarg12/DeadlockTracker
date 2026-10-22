@@ -10,9 +10,9 @@ SELECT
 FROM (
     SELECT
         item_id,
-        SUM(games)                                    AS games,
-        SUM(wins)                                     AS wins,
-        ROUND(SUM(wins)::NUMERIC / SUM(games), 4)     AS win_rate
+        SUM(games) AS games,
+        SUM(wins) AS wins,
+        ROUND(SUM(wins)::NUMERIC / SUM(games), 4) AS win_rate
     FROM item_daily_stats
     WHERE match_date >= (CAST(:since AS TIMESTAMPTZ) AT TIME ZONE 'UTC')::DATE
       AND match_mode = :match_mode

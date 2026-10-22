@@ -7,12 +7,12 @@ SELECT
     t.cost,
     s.games,
     s.wins,
-    ROUND(s.wins::NUMERIC / s.games, 4)  AS win_rate
+    ROUND(s.wins::NUMERIC / s.games, 4) AS win_rate
 FROM (
     SELECT
         item_id,
-        COUNT(*)                     AS games,
-        COUNT(*) FILTER (WHERE won)  AS wins
+        COUNT(*) AS games,
+        COUNT(*) FILTER (WHERE won) AS wins
     FROM (
         SELECT mpi.item_id, (mp.team = m.winning_team) AS won
         FROM match_player_item mpi
@@ -20,8 +20,8 @@ FROM (
         JOIN match m USING (match_id)
         WHERE m.start_time >= :since
           AND m.match_mode = :match_mode
-          AND m.match_id   >= :min_match_id
-          AND mp.match_id  >= :min_match_id
+          AND m.match_id >= :min_match_id
+          AND mp.match_id >= :min_match_id
           AND mpi.match_id >= :min_match_id
         GROUP BY mpi.match_id, mpi.account_id, mpi.item_id, won
     ) bought

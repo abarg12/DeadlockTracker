@@ -1,4 +1,4 @@
--- removes the indexes.sql indexes from whichever schema search_path points at
+-- removes the indexes.sql indexes to help with testing process
 
 DROP INDEX IF EXISTS match_start_time_idx;
 DROP INDEX IF EXISTS match_player_hero_idx;

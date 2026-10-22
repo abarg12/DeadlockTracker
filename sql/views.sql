@@ -1,4 +1,4 @@
--- Daily (UTC) hero and item rollups for whichever schema search_path points at.
+-- Daily (UTC) hero and item calculations
 -- Refresh after each load with SELECT refresh_stats();
 
 DROP MATERIALIZED VIEW IF EXISTS hero_daily_stats;
@@ -8,16 +8,16 @@ DROP FUNCTION IF EXISTS refresh_stats();
 -- hero results per day, game mode and match mode
 CREATE MATERIALIZED VIEW hero_daily_stats AS
 SELECT
-    (m.start_time AT TIME ZONE 'UTC')::DATE          AS match_date,
+    (m.start_time AT TIME ZONE 'UTC')::DATE AS match_date,
     m.game_mode,
     m.match_mode,
     mp.hero_id,
-    COUNT(*)                                         AS games,
+    COUNT(*) AS games,
     COUNT(*) FILTER (WHERE mp.team = m.winning_team) AS wins,
-    SUM(mp.kills)                                    AS kills,
-    SUM(mp.deaths)                                   AS deaths,
-    SUM(mp.assists)                                  AS assists,
-    SUM(mp.net_worth)                                AS net_worth
+    SUM(mp.kills) AS kills,
+    SUM(mp.deaths) AS deaths,
+    SUM(mp.assists) AS assists,
+    SUM(mp.net_worth) AS net_worth
 FROM match_player mp
 JOIN match m USING (match_id)
 GROUP BY 1, 2, 3, 4;
@@ -33,15 +33,15 @@ SELECT
     game_mode,
     match_mode,
     item_id,
-    COUNT(*)                                         AS games,
-    COUNT(*) FILTER (WHERE won)                      AS wins
+    COUNT(*) AS games,
+    COUNT(*) FILTER (WHERE won) AS wins
 FROM (
     SELECT
-        (m.start_time AT TIME ZONE 'UTC')::DATE      AS match_date,
+        (m.start_time AT TIME ZONE 'UTC')::DATE AS match_date,
         m.game_mode,
         m.match_mode,
         mpi.item_id,
-        (mp.team = m.winning_team)                   AS won
+        (mp.team = m.winning_team) AS won
     FROM match_player_item mpi
     JOIN match_player mp USING (match_id, account_id)
     JOIN match m USING (match_id)

@@ -4,12 +4,12 @@ SELECT
     m.start_time,
     m.match_mode,
     m.duration_s,
-    h.name                          AS hero,
+    h.name AS hero,
     mp.kills,
     mp.deaths,
     mp.assists,
     mp.net_worth,
-    (mp.team = m.winning_team)      AS won
+    (mp.team = m.winning_team) AS won
 FROM match_player mp
 JOIN match m USING (match_id)
 JOIN hero h USING (hero_id)
