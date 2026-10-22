@@ -15,16 +15,16 @@ A Streamlit dashboard of Deadlock hero, item and player statistics, backed by Po
 
 **macOS (Homebrew)**
 ```bash
-brew install postgresql@17
-brew services start postgresql@17
-echo 'export PATH="$(brew --prefix postgresql@17)/bin:$PATH"' >> ~/.zshrc
+brew install postgresql@16
+brew services start postgresql@16
+echo 'export PATH="$(brew --prefix postgresql@16)/bin:$PATH"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
 **Ubuntu / Debian**
 ```bash
 sudo apt update
-sudo apt install postgresql
+sudo apt install postgresql-16
 sudo systemctl start postgresql
 ```
 
@@ -71,7 +71,7 @@ Then edit `.streamlit/secrets.toml` with your own values:
 
    | OS | Command |
    |---|---|
-   | macOS | `brew services start postgresql@17` |
+   | macOS | `brew services start postgresql@16` |
    | Ubuntu / Debian | `sudo systemctl start postgresql` |
    | Windows | Usually starts automatically. If not, start the postgresql service from the Services app. |
 
