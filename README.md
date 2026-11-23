@@ -115,7 +115,7 @@ The pages run the same SQL files in `sql/queries/` that the benchmarks measure:
 | Overview | `daily_summary.sql` (matches per day and average duration) |
 | Heroes | `hero_win_rates_mv.sql` (reads the `hero_daily_stats` materialized view) |
 | Items | `item_win_rates_mv.sql` (reads the `item_daily_stats` materialized view) |
-| Player history | `player_match_history.sql` (a player's 20 most recent matches) |
+| Player history | `player_match_history.sql` (a player's 20 most recent matches), `player_search.sql` (find a player by name) |
 
 ---
 
@@ -162,6 +162,30 @@ python -m bench.run --database deadlock_bench --sizes 10000,25000,50000 --repeat
    | `correctness.csv` | whether every configuration returned identical rows, and each `*_mv` query matched its raw version |
    | `plans/` | every query plan as JSON, for per-node bottleneck analysis |
    | `metadata.json` | PostgreSQL version and settings, query parameters, git commit |
+
+### Query design study
+
+The ablation above changes the schema around fixed, already well-written queries. The query design study instead holds the schema fixed (baseline) and asks two questions: how much does the way a query is written matter, and when does an index actually help?
+
+```bash
+python -m bench.study --database deadlock_bench --size 50000 --repeats 5
+```
+
+It runs three experiments and writes `results/study-<timestamp>/summary.md` with the tables below, plus `latency.csv`, `summary.csv` and `plans/` in the same format as the ablation. Every table records which indexes each plan actually read.
+
+1. **Rewrites.** Each query in `sql/queries/naive/` contains one common mistake and returns exactly the same rows as its well-written version. Both run with and without `sql/indexes.sql`:
+
+   | Pair | Mistake in the naive version | Fix |
+   |---|---|---|
+   | `recent_matches` | arithmetic on the column: `:as_of - start_time <= :hours` | compare the bare column: `start_time >= :as_of - :hours` |
+   | `hero_win_rates` | aggregates every mode and day in a materialized CTE, then filters | filter in `WHERE`, before aggregating |
+   | `player_match_history` | casts the column: `account_id::TEXT = :id` | compare `account_id` to the parameter directly |
+
+   For the first and third pairs, adding indexes leaves the naive version just as slow, because Postgres can't use the index. Only the rewritten version gets fast. The second pair's gain comes from the rewrite alone.
+
+2. **Selectivity.** `study/recent_matches` runs over windows from 1 hour to 7 days. The index wins clearly when the window holds a few percent of the matches, the gain shrinks as the window grows, and past roughly half the table the planner switches back to a sequential scan. This is why indexes barely change the ablation's 3-day windowed queries.
+
+3. **Name search.** The app's substring search (`ILIKE '%text%'`) and a prefix search, under no name index, a b-tree on `lower(account_name)` and a trigram index (`pg_trgm`). Each index serves only the predicate it fits: the b-tree serves the prefix, and the trigram index serves the substring. The search needs player names, which the study takes from the Steam name snapshot the app caches in `data/lake_cache/`. Run the app once first, or this experiment is skipped.
 
 ---
 

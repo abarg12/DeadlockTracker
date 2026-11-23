@@ -31,14 +31,16 @@ CONFIGS = [
 MV_QUERIES = {"hero_win_rates_mv": "hero_win_rates", "item_win_rates_mv": "item_win_rates"}
 
 
+def prepare(name: str) -> str:
+    """sql/queries/<name>.sql with :name parameters converted to psycopg2's %(name)s."""
+    sql = query_sql(name).replace("%", "%%")
+    # skip :: casts and times like 12:30
+    return re.sub(r"(?<![:\w]):(\w+)", r"%(\1)s", sql)
+
+
 def load_queries() -> dict[str, str]:
-    """Reads sql/queries/*.sql, converting :name parameters to psycopg2's %(name)s."""
-    queries = {}
-    for path in sorted(QUERIES.glob("*.sql")):
-        sql = query_sql(path.stem).replace("%", "%%")
-        # skip :: casts and times like 12:30
-        queries[path.stem] = re.sub(r"(?<![:\w]):(\w+)", r"%(\1)s", sql)
-    return queries
+    """Reads sql/queries/*.sql (not the naive/ and study/ subfolders, which bench.study runs)."""
+    return {path.stem: prepare(path.stem) for path in sorted(QUERIES.glob("*.sql"))}
 
 
 def pick_params(cur, window_days: float) -> dict:
@@ -188,7 +190,9 @@ def main() -> None:
             setup.writerow([size, config, step, round(time.perf_counter() - started, 3), schema_size(cur, schema)])
             cur.execute(f"SET search_path TO {schema}")
 
-            to_run = [q for q in queries if (q in MV_QUERIES) == views]
+            # queries needing parameters this study doesn't pick (player_search) belong to bench.study
+            to_run = [q for q in queries if (q in MV_QUERIES) == views
+                      and set(re.findall(r"%\((\w+)\)s", queries[q])) <= params.keys()]
             for name in to_run:
                 sql = queries[name]
                 cur.execute(sql, params)  # warm-up, and the result for the correctness check
@@ -223,7 +227,7 @@ def main() -> None:
                 else:
                     pair = [h for (s, c, q), h in hashes.items() if s == size and q == name]
                     label = "all non-view configs"
-                if None in pair:
+                if not pair or None in pair:
                     continue
                 same = len(set(pair)) == 1
                 failures += not same

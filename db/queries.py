@@ -134,15 +134,7 @@ def player_name(account_id: int) -> str | None:
 def _search_players(text: str, version: int) -> pd.DataFrame:
     # escape LIKE wildcards so the search text matches literally
     pattern = "%" + text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
-    return run_query(
-        """SELECT p.account_id, p.account_name, COUNT(*) AS matches
-           FROM player p JOIN match_player mp USING (account_id)
-           WHERE p.account_name ILIKE :pattern
-           GROUP BY p.account_id, p.account_name
-           ORDER BY lower(p.account_name) = lower(:text) DESC, matches DESC, p.account_id
-           LIMIT 20""",
-        {"pattern": pattern, "text": text},
-    )
+    return _run("player_search", pattern=pattern, text=text)
 
 
 def search_players(text: str) -> pd.DataFrame:

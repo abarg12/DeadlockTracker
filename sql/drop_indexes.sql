@@ -4,3 +4,4 @@ DROP INDEX IF EXISTS match_start_time_idx;
 DROP INDEX IF EXISTS match_player_hero_idx;
 DROP INDEX IF EXISTS match_player_account_idx;
 DROP INDEX IF EXISTS match_player_item_item_idx;
+DROP INDEX IF EXISTS player_name_trgm_idx;
